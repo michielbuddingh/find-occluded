@@ -1,0 +1,4 @@
+* TODO Handle octopus merges correctly
+* TODO Try to detect diff-resolution occlusions
+  For example, when a file has been changed in both ancestor commits A
+  and B, but has been reverted to state A in merge M.

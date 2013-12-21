@@ -1,0 +1,13 @@
+find-occluded.sh [<commit>] [diffopts]
+
+traverses the ancestors of <commit> (presumed to be HEAD if omitted)
+to find commits that have been occluded by a merge.  An occluded
+ancestor is essentially reverted, but does not show up in git logs
+very clearly.  [diffopts] can be used to pass output options to git
+diff.
+
+Octopus merges will not be handled correctly.
+
+This script is very slow, and works its way back to the very first
+merge commit ancestor.  On long, merge-intensive histories, expect it
+to take several minutes to complete.
