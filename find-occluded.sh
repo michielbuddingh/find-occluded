@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Copyright 2013, Michiel Buddingh, All rights reserved.  Use of this
+# Copyright 2013-2014, Michiel Buddingh, All rights reserved.  Use of this
 # code is governed by version 2.0 or later of the Apache License,
 # available at http://www.apache.org/licenses/LICENSE-2.0
 
 function difference {
-    A=$1
-    B=$2
+    local -r A=$1
+    local -r B=$2
 
     (
 	echo "$A"
@@ -14,8 +14,8 @@ function difference {
 }
 
 function intersect {
-    A=$1
-    B=$2
+    local -r A=$1
+    local -r B=$2
 
     (
 	echo "$A"
@@ -24,9 +24,10 @@ function intersect {
 }
 
 function report {
-    MERGE=$1
-    CHANGE=$2
-    FILES=$3
+    local -r MERGE=$1
+    local -r CHANGE=$2
+    local -r FILES=$3
+    local -r DIFFOPTS=$4
 
     echo "Merge $MERGE reverts the following from $CHANGE:"
     git --no-pager diff $DIFFOPTS $CHANGE $MERGE -- $FILES
@@ -51,47 +52,47 @@ EOF
     exit
 }
 
-HEAD=$1
-
-if [ -z $HEAD ]; then
-    HEAD="HEAD";
-elif [[ "$HEAD" == "--help" || "$HEAD" == "-h" || "$HEAD" == "--h" ]]; then
-    print-help-and-quit;
-fi
-
-shift
-
-DIFFOPTS=$*
-
-if [ -z $DIFFOPTS ]; then
-    DIFFOPTS="--stat";
-fi
-
-for MERGE in $(git rev-list --abbrev-commit --merges $HEAD); do
-    LEFT="$MERGE^1"
-    RIGHT="$MERGE^2"
-    BASE=$(git merge-base $LEFT $RIGHT)
-
-    TOTAL=$(git diff-tree --name-only $MERGE $BASE)
-    LEFTCHANGE=$(git diff-tree --name-only $LEFT $BASE)
-    RIGHTCHANGE=$(git diff-tree --name-only $RIGHT $BASE)
-
-    LEFTREVERT=$(intersect "$(difference "$TOTAL" "$LEFTCHANGE")" "$LEFTCHANGE")
-    RIGHTREVERT=$(intersect "$(difference "$TOTAL" "$RIGHTCHANGE")" "$RIGHTCHANGE")
-
-    if [ ! -z "$LEFTREVERT$RIGHTREVERT" ]; then
-	TOTAL=$(git diff --name-only $MERGE $BASE)
-
-	if [ ! -z "$LEFTREVERT" ]; then
-	    LEFTCHANGE=$(git diff --name-only $LEFT $BASE)
-	    LEFTREVERT=$(intersect "$(difference "$TOTAL" "$LEFTCHANGE")" "$LEFTCHANGE")
-	    report $MERGE $LEFT "$LEFTREVERT"
-	fi
-
-	if [ ! -z "$RIGHTREVERT" ]; then
-	    RIGHTCHANGE=$(git diff --name-only $RIGHT $BASE)
-	    RIGHTREVERT=$(intersect "$(difference "$TOTAL" "$RIGHTCHANGE")" "$RIGHTCHANGE")
-	    report $MERGE $RIGHT "$RIGHTREVERT"
-	fi
+function find {
+    if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "--h" ]]; then
+	print-help-and-quit;
+    else
+	local -r HEAD=${1:-"HEAD"};
     fi
-done;
+
+    shift
+
+    DIFFOPTS=${*:---stat}
+
+    local MERGE LEFT RIGHT BASE TOTAL LEFTCHANGE RIGHTCHANGE
+
+    for MERGE in $(git rev-list --abbrev-commit --merges $HEAD); do
+	LEFT="$MERGE^1"
+	RIGHT="$MERGE^2"
+	BASE=$(git merge-base $LEFT $RIGHT)
+
+	TOTAL=$(git diff-tree --name-only $MERGE $BASE)
+	LEFTCHANGE=$(git diff-tree --name-only $LEFT $BASE)
+	RIGHTCHANGE=$(git diff-tree --name-only $RIGHT $BASE)
+
+	LEFTREVERT=$(intersect "$(difference "$TOTAL" "$LEFTCHANGE")" "$LEFTCHANGE")
+	RIGHTREVERT=$(intersect "$(difference "$TOTAL" "$RIGHTCHANGE")" "$RIGHTCHANGE")
+
+	if [ ! -z "$LEFTREVERT$RIGHTREVERT" ]; then
+	    TOTAL=$(git diff --name-only $MERGE $BASE)
+
+	    if [ ! -z "$LEFTREVERT" ]; then
+		LEFTCHANGE=$(git diff --name-only $LEFT $BASE)
+		LEFTREVERT=$(intersect "$(difference "$TOTAL" "$LEFTCHANGE")" "$LEFTCHANGE")
+		report $MERGE $LEFT "$LEFTREVERT" "$DIFFOPTS"
+	    fi
+
+	    if [ ! -z "$RIGHTREVERT" ]; then
+		RIGHTCHANGE=$(git diff --name-only $RIGHT $BASE)
+		RIGHTREVERT=$(intersect "$(difference "$TOTAL" "$RIGHTCHANGE")" "$RIGHTCHANGE")
+		report $MERGE $RIGHT "$RIGHTREVERT" "$DIFFOPTS"
+	    fi
+	fi
+    done;
+}
+
+find $*;

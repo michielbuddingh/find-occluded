@@ -11,3 +11,7 @@ Octopus merges will not be handled correctly.
 This script is very slow, and works its way back to the very first
 merge commit ancestor.  On long, merge-intensive histories, expect it
 to take several minutes to complete.
+
+For a version that works with the msysgit distribution ~ 2013, which
+ships many severely outdated versions of the GNU tools, please check
+out the unmaintained win32 branch.
